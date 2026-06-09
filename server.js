@@ -13,6 +13,14 @@ app.use(express.static(path.join(__dirname, 'public')));
 let players = {}; // id -> { id, name, vote, ws }
 let revealed = false;
 
+const VOTABLE = [1, 2, 3, 5, 8, 13, 21, 34, 55, 89];
+
+function nearestVotable(avg) {
+  return VOTABLE.reduce((best, v) =>
+    Math.abs(v - avg) < Math.abs(best - avg) ? v : best
+  );
+}
+
 function broadcast(data) {
   const msg = JSON.stringify(data);
   wss.clients.forEach(client => {
@@ -34,7 +42,8 @@ function getPublicState() {
   if (revealed) {
     const votes = playerList.filter(p => p.vote !== null).map(p => p.vote);
     if (votes.length > 0) {
-      average = Math.round(votes.reduce((a, b) => a + b, 0) / votes.length);
+      const avg = votes.reduce((a, b) => a + b, 0) / votes.length;
+      average = nearestVotable(avg);
     }
   }
 
