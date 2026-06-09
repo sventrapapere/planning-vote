@@ -1,0 +1,543 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Planning Vote</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'Segoe UI', system-ui, sans-serif;
+    min-height: 100dvh;
+    background: linear-gradient(135deg, #0f0c29, #302b63, #24243e);
+    color: #e8eaf0;
+    overflow: hidden;
+  }
+
+  /* animated background blobs */
+  body::before, body::after {
+    content: '';
+    position: fixed;
+    border-radius: 50%;
+    filter: blur(80px);
+    opacity: 0.35;
+    pointer-events: none;
+    z-index: 0;
+  }
+  body::before {
+    width: 500px; height: 500px;
+    background: radial-gradient(circle, #7c3aed, transparent 70%);
+    top: -120px; left: -100px;
+    animation: blob1 12s ease-in-out infinite alternate;
+  }
+  body::after {
+    width: 420px; height: 420px;
+    background: radial-gradient(circle, #2563eb, transparent 70%);
+    bottom: -100px; right: -80px;
+    animation: blob2 10s ease-in-out infinite alternate;
+  }
+  @keyframes blob1 { to { transform: translate(60px, 80px) scale(1.1); } }
+  @keyframes blob2 { to { transform: translate(-50px, -60px) scale(1.15); } }
+
+  /* ── Join screen ── */
+  #join-screen {
+    position: relative; z-index: 10;
+    height: 100dvh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 20px;
+  }
+
+  .glass-card {
+    background: rgba(255,255,255,0.07);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border: 1px solid rgba(255,255,255,0.15);
+    border-radius: 24px;
+    box-shadow: 0 8px 40px rgba(0,0,0,0.4);
+    padding: 40px 48px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 18px;
+  }
+
+  .glass-card h1 {
+    font-size: 2rem;
+    font-weight: 700;
+    background: linear-gradient(90deg, #a78bfa, #60a5fa);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+  .glass-card p { color: rgba(255,255,255,0.5); font-size: 0.9rem; }
+
+  .glass-input {
+    width: 260px;
+    padding: 12px 18px;
+    border-radius: 12px;
+    border: 1px solid rgba(255,255,255,0.2);
+    background: rgba(255,255,255,0.08);
+    color: #e8eaf0;
+    font-size: 1rem;
+    outline: none;
+    transition: border-color .2s, background .2s;
+  }
+  .glass-input:focus {
+    border-color: rgba(167,139,250,0.6);
+    background: rgba(255,255,255,0.12);
+  }
+  .glass-input::placeholder { color: rgba(255,255,255,0.3); }
+
+  .btn-primary {
+    padding: 12px 36px;
+    border-radius: 12px;
+    border: none;
+    background: linear-gradient(135deg, #7c3aed, #2563eb);
+    color: #fff;
+    font-size: 1rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: opacity .2s, transform .15s;
+    box-shadow: 0 4px 20px rgba(124,58,237,0.4);
+  }
+  .btn-primary:hover { opacity: 0.88; transform: translateY(-1px); }
+
+  /* ── Game screen ── */
+  #game-screen {
+    display: none;
+    position: relative;
+    z-index: 10;
+    width: 100%;
+    height: 100dvh;
+  }
+
+  /* ── Table area ── */
+  #table-wrap {
+    position: absolute;
+    inset: 0;
+    bottom: 150px; /* space for vote panel */
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  #table {
+    width: min(480px, 72vw);
+    height: min(200px, 28vw);
+    background: rgba(255,255,255,0.06);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    border: 1px solid rgba(255,255,255,0.18);
+    border-radius: 28px;
+    box-shadow: 0 8px 40px rgba(0,0,0,0.35), inset 0 1px 0 rgba(255,255,255,0.12);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-direction: column;
+    gap: 10px;
+    position: relative;
+  }
+
+  #average-display {
+    font-size: 3.2rem;
+    font-weight: 800;
+    background: linear-gradient(90deg, #a78bfa, #60a5fa);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    min-height: 4rem;
+    display: flex;
+    align-items: center;
+    line-height: 1;
+  }
+
+  #reveal-btn {
+    padding: 10px 28px;
+    border-radius: 50px;
+    border: 1px solid rgba(255,255,255,0.25);
+    background: rgba(255,255,255,0.1);
+    color: #fff;
+    font-size: 0.9rem;
+    font-weight: 600;
+    cursor: pointer;
+    backdrop-filter: blur(8px);
+    transition: background .2s, transform .15s;
+    letter-spacing: .04em;
+  }
+  #reveal-btn:hover { background: rgba(255,255,255,0.18); transform: scale(1.04); }
+  #reveal-btn:disabled { opacity: 0.35; cursor: default; transform: none; }
+
+  #reset-btn {
+    padding: 8px 22px;
+    border-radius: 50px;
+    border: 1px solid rgba(167,139,250,0.4);
+    background: transparent;
+    color: #a78bfa;
+    font-size: 0.85rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background .2s;
+  }
+  #reset-btn:hover { background: rgba(167,139,250,0.12); }
+
+  /* ── Players ── */
+  .player-slot {
+    position: fixed;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+    transform: translate(-50%, -50%);
+    pointer-events: none;
+  }
+
+  .player-name {
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: rgba(255,255,255,0.65);
+    white-space: nowrap;
+    max-width: 88px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    text-shadow: 0 1px 6px rgba(0,0,0,0.8);
+  }
+  .player-name.is-me {
+    color: #a78bfa;
+  }
+
+  /* ── Card ── */
+  .card {
+    width: 44px;
+    height: 62px;
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.2rem;
+    font-weight: 800;
+    transition: transform .3s;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .card.not-voted {
+    background: rgba(255,255,255,0.05);
+    border: 1px dashed rgba(255,255,255,0.18);
+    color: transparent;
+  }
+
+  .card.voted-hidden {
+    background: rgba(124,58,237,0.25);
+    border: 1px solid rgba(124,58,237,0.5);
+    backdrop-filter: blur(6px);
+    color: transparent;
+  }
+  .card.voted-hidden::after {
+    content: '?';
+    position: absolute;
+    font-size: 1.4rem;
+    color: rgba(167,139,250,0.6);
+  }
+
+  .card.voted-shown {
+    background: rgba(255,255,255,0.12);
+    border: 1px solid rgba(255,255,255,0.3);
+    backdrop-filter: blur(8px);
+    color: #e8eaf0;
+    box-shadow: 0 4px 16px rgba(0,0,0,0.3);
+  }
+
+  .card.my-voted {
+    background: linear-gradient(135deg, rgba(124,58,237,0.6), rgba(37,99,235,0.6));
+    border: 1px solid rgba(167,139,250,0.7);
+    backdrop-filter: blur(8px);
+    color: #fff;
+    box-shadow: 0 4px 20px rgba(124,58,237,0.4);
+  }
+
+  /* ── Vote panel ── */
+  #vote-panel {
+    position: fixed;
+    bottom: 0; left: 0; right: 0;
+    background: rgba(15,12,41,0.7);
+    backdrop-filter: blur(24px);
+    -webkit-backdrop-filter: blur(24px);
+    border-top: 1px solid rgba(255,255,255,0.1);
+    padding: 12px 16px 16px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+    z-index: 20;
+  }
+
+  #vote-panel label {
+    font-size: 0.72rem;
+    color: rgba(255,255,255,0.4);
+    font-weight: 600;
+    letter-spacing: .1em;
+    text-transform: uppercase;
+  }
+
+  #cards-row {
+    display: flex;
+    gap: 7px;
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+
+  .vote-card {
+    width: 42px;
+    height: 58px;
+    border-radius: 10px;
+    border: 1px solid rgba(255,255,255,0.15);
+    background: rgba(255,255,255,0.07);
+    color: rgba(255,255,255,0.8);
+    font-size: 1rem;
+    font-weight: 700;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background .15s, border-color .15s, transform .15s;
+    user-select: none;
+    backdrop-filter: blur(6px);
+  }
+  .vote-card:hover {
+    background: rgba(124,58,237,0.3);
+    border-color: rgba(167,139,250,0.6);
+    transform: translateY(-5px);
+    color: #fff;
+  }
+  .vote-card.selected {
+    background: linear-gradient(135deg, rgba(124,58,237,0.7), rgba(37,99,235,0.7));
+    border-color: rgba(167,139,250,0.9);
+    color: #fff;
+    transform: translateY(-7px);
+    box-shadow: 0 6px 20px rgba(124,58,237,0.5);
+  }
+
+  #custom-vote {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+  }
+
+  #custom-input {
+    width: 72px;
+    padding: 7px 10px;
+    border-radius: 10px;
+    border: 1px solid rgba(255,255,255,0.15);
+    background: rgba(255,255,255,0.07);
+    color: #e8eaf0;
+    font-size: 0.95rem;
+    outline: none;
+    text-align: center;
+    backdrop-filter: blur(6px);
+  }
+  #custom-input:focus { border-color: rgba(167,139,250,0.6); }
+  #custom-input::placeholder { color: rgba(255,255,255,0.25); }
+
+  #custom-submit {
+    padding: 7px 18px;
+    border-radius: 10px;
+    border: 1px solid rgba(255,255,255,0.15);
+    background: rgba(255,255,255,0.08);
+    color: rgba(255,255,255,0.8);
+    font-weight: 600;
+    cursor: pointer;
+    font-size: 0.88rem;
+    transition: background .2s;
+    backdrop-filter: blur(6px);
+  }
+  #custom-submit:hover { background: rgba(124,58,237,0.3); color: #fff; }
+</style>
+</head>
+<body>
+
+<!-- Join -->
+<div id="join-screen">
+  <div class="glass-card">
+    <h1>Planning Vote</h1>
+    <p>Inserisci il tuo nome per entrare alla sessione</p>
+    <input id="name-input" class="glass-input" type="text" placeholder="Il tuo nome…" maxlength="30" autocomplete="off">
+    <button id="join-btn" class="btn-primary">Entra</button>
+  </div>
+</div>
+
+<!-- Game -->
+<div id="game-screen">
+  <div id="table-wrap">
+    <div id="table">
+      <div id="average-display"></div>
+      <button id="reveal-btn">Rivela media</button>
+      <button id="reset-btn" style="display:none">Nuova stima</button>
+    </div>
+  </div>
+
+  <div id="vote-panel">
+    <label>La tua stima</label>
+    <div id="cards-row"></div>
+    <div id="custom-vote">
+      <input id="custom-input" type="number" min="0" max="999" placeholder="Altro…">
+      <button id="custom-submit">Vota</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const PRESET_VALUES = [1, 2, 3, 5, 8, 13, 21, 34, 55, 89];
+
+let myId = null;
+let state = { players: [], revealed: false, average: null };
+let myVote = null;
+let ws;
+
+const joinScreen = document.getElementById('join-screen');
+const gameScreen = document.getElementById('game-screen');
+const nameInput = document.getElementById('name-input');
+const joinBtn = document.getElementById('join-btn');
+const avgDisplay = document.getElementById('average-display');
+const revealBtn = document.getElementById('reveal-btn');
+const resetBtn = document.getElementById('reset-btn');
+const cardsRow = document.getElementById('cards-row');
+const customInput = document.getElementById('custom-input');
+const customSubmit = document.getElementById('custom-submit');
+
+PRESET_VALUES.forEach(v => {
+  const card = document.createElement('div');
+  card.className = 'vote-card';
+  card.textContent = v;
+  card.dataset.value = v;
+  card.addEventListener('click', () => sendVote(v, card));
+  cardsRow.appendChild(card);
+});
+
+customSubmit.addEventListener('click', () => {
+  const v = parseInt(customInput.value, 10);
+  if (!isNaN(v) && v >= 0 && v <= 999) {
+    sendVote(v, null);
+    customInput.value = '';
+  }
+});
+customInput.addEventListener('keydown', e => { if (e.key === 'Enter') customSubmit.click(); });
+
+function sendVote(value, cardEl) {
+  if (state.revealed) return;
+  myVote = value;
+  document.querySelectorAll('.vote-card').forEach(c => c.classList.remove('selected'));
+  if (cardEl) cardEl.classList.add('selected');
+  ws.send(JSON.stringify({ type: 'vote', value }));
+}
+
+revealBtn.addEventListener('click', () => ws.send(JSON.stringify({ type: 'reveal' })));
+resetBtn.addEventListener('click', () => {
+  myVote = null;
+  document.querySelectorAll('.vote-card').forEach(c => c.classList.remove('selected'));
+  ws.send(JSON.stringify({ type: 'reset' }));
+});
+
+function connect(name) {
+  const proto = location.protocol === 'https:' ? 'wss' : 'ws';
+  ws = new WebSocket(`${proto}://${location.host}`);
+
+  ws.addEventListener('open', () => ws.send(JSON.stringify({ type: 'join', name })));
+
+  ws.addEventListener('message', e => {
+    const msg = JSON.parse(e.data);
+    if (msg.type === 'joined') {
+      myId = msg.id;
+      joinScreen.style.display = 'none';
+      gameScreen.style.display = 'block';
+    }
+    if (msg.type === 'state') {
+      state = msg;
+      render();
+    }
+  });
+
+  ws.addEventListener('close', () => setTimeout(() => connect(name), 2000));
+}
+
+joinBtn.addEventListener('click', () => {
+  const name = nameInput.value.trim();
+  if (name) connect(name);
+});
+nameInput.addEventListener('keydown', e => { if (e.key === 'Enter') joinBtn.click(); });
+
+function render() {
+  if (state.revealed && state.average !== null) {
+    avgDisplay.textContent = state.average;
+    revealBtn.style.display = 'none';
+    resetBtn.style.display = 'inline-block';
+  } else {
+    avgDisplay.textContent = '';
+    revealBtn.style.display = 'inline-block';
+    revealBtn.disabled = !state.players.some(p => p.voted);
+    resetBtn.style.display = 'none';
+  }
+  renderPlayers();
+}
+
+function renderPlayers() {
+  document.querySelectorAll('.player-slot').forEach(el => el.remove());
+
+  const players = state.players;
+  if (!players.length) return;
+
+  const tableEl = document.getElementById('table');
+  const rect = tableEl.getBoundingClientRect();
+
+  const rx = rect.width / 2 + 64;
+  const ry = rect.height / 2 + 72;
+  const cx = rect.left + rect.width / 2;
+  const cy = rect.top + rect.height / 2;
+
+  players.forEach((p, i) => {
+    const angle = (2 * Math.PI * i) / players.length - Math.PI / 2;
+    const x = cx + rx * Math.cos(angle);
+    const y = cy + ry * Math.sin(angle);
+
+    const slot = document.createElement('div');
+    slot.className = 'player-slot';
+    slot.style.left = x + 'px';
+    slot.style.top = y + 'px';
+
+    const card = document.createElement('div');
+    const isMe = p.id === myId;
+
+    if (!p.voted) {
+      card.className = 'card not-voted';
+    } else if (state.revealed) {
+      card.className = isMe ? 'card my-voted' : 'card voted-shown';
+      card.textContent = p.vote;
+    } else {
+      card.className = isMe ? 'card my-voted' : 'card voted-hidden';
+      if (isMe) card.textContent = myVote !== null ? myVote : '';
+    }
+
+    const name = document.createElement('div');
+    name.className = 'player-name' + (isMe ? ' is-me' : '');
+    name.textContent = p.name + (isMe ? ' (tu)' : '');
+
+    const isBottom = Math.sin(angle) > 0;
+    if (isBottom) {
+      slot.appendChild(card);
+      slot.appendChild(name);
+    } else {
+      slot.appendChild(name);
+      slot.appendChild(card);
+    }
+
+    document.body.appendChild(slot);
+  });
+}
+
+window.addEventListener('resize', () => { if (state.players.length) renderPlayers(); });
+</script>
+</body>
+</html>
