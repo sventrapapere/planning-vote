@@ -46,7 +46,7 @@ function getPublicState(room) {
   let average = null;
   if (room.revealed) {
     const votes = Object.values(room.players)
-      .filter(p => !p.observer && p.vote !== null)
+      .filter(p => !p.observer && p.vote !== null && p.vote !== 'skip')
       .map(p => p.vote);
     if (votes.length > 0) {
       const avg = votes.reduce((a, b) => a + b, 0) / votes.length;
@@ -86,10 +86,15 @@ wss.on('connection', (ws) => {
     const room = rooms[roomId];
 
     if (msg.type === 'vote' && room.players[id] && !room.players[id].observer) {
-      const v = Number(msg.value);
-      if (!isNaN(v) && v >= 0 && v <= 999) {
-        room.players[id].vote = v;
+      if (msg.value === 'skip') {
+        room.players[id].vote = 'skip';
         broadcast(room, getPublicState(room));
+      } else {
+        const v = Number(msg.value);
+        if (!isNaN(v) && v >= 0 && v <= 999) {
+          room.players[id].vote = v;
+          broadcast(room, getPublicState(room));
+        }
       }
     }
 

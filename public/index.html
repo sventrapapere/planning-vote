@@ -328,6 +328,9 @@
   }
   .vote-card:hover    { background: rgba(124,58,237,0.3); border-color: rgba(167,139,250,0.6); transform: translateY(-5px); color: #fff; }
   .vote-card.selected { background: linear-gradient(135deg, rgba(124,58,237,0.7), rgba(37,99,235,0.7)); border-color: rgba(167,139,250,0.9); color: #fff; transform: translateY(-7px); box-shadow: 0 6px 20px rgba(124,58,237,0.5); }
+  .vote-card-skip { color: rgba(255,255,255,0.4); border-style: dashed; font-size: 1.4rem; }
+  .vote-card-skip:hover { background: rgba(255,255,255,0.08); border-color: rgba(255,255,255,0.3); color: rgba(255,255,255,0.7); }
+  .vote-card-skip.selected { background: rgba(255,255,255,0.1); border-color: rgba(255,255,255,0.4); color: #fff; box-shadow: none; }
 
   #custom-vote { display: flex; gap: 8px; align-items: center; }
 
@@ -452,6 +455,14 @@ PRESET_VALUES.forEach(v => {
   card.addEventListener('click', () => sendVote(v, card));
   cardsRow.appendChild(card);
 });
+
+// Skip card
+const skipCard = document.createElement('div');
+skipCard.className = 'vote-card vote-card-skip';
+skipCard.textContent = '—';
+skipCard.title = 'Non voglio votare questa stima';
+skipCard.addEventListener('click', () => sendVote('skip', skipCard));
+cardsRow.appendChild(skipCard);
 
 customSubmit.addEventListener('click', () => {
   const v = parseInt(customInput.value, 10);
@@ -643,7 +654,7 @@ function renderPlayers() {
         visual.className = 'card not-voted';
       } else if (state.revealed) {
         visual.className   = isMe ? 'card my-voted' : 'card voted-shown';
-        visual.textContent = p.vote;
+        visual.textContent = p.vote === 'skip' ? '—' : p.vote;
       } else {
         visual.className   = isMe ? 'card my-voted' : 'card voted-hidden';
         if (isMe) visual.textContent = myVote !== null ? myVote : '';
