@@ -39,17 +39,19 @@
   @keyframes blob1 { to { transform: translate(60px, 80px) scale(1.1); } }
   @keyframes blob2 { to { transform: translate(-50px, -60px) scale(1.15); } }
 
-  /* ── Join screen ── */
-  #join-screen {
+  /* ── Screens ── */
+  .screen {
     position: relative; z-index: 10;
     height: 100dvh;
-    display: flex;
+    display: none;
     flex-direction: column;
     align-items: center;
     justify-content: center;
     gap: 20px;
   }
+  .screen.active { display: flex; }
 
+  /* ── Glass card ── */
   .glass-card {
     background: rgba(255,255,255,0.07);
     backdrop-filter: blur(20px);
@@ -62,6 +64,7 @@
     flex-direction: column;
     align-items: center;
     gap: 18px;
+    min-width: 320px;
   }
 
   .glass-card h1 {
@@ -72,10 +75,11 @@
     -webkit-text-fill-color: transparent;
     background-clip: text;
   }
-  .glass-card p { color: rgba(255,255,255,0.5); font-size: 0.9rem; }
+  .glass-card p  { color: rgba(255,255,255,0.5); font-size: 0.9rem; text-align: center; }
+  .glass-card hr { width: 100%; border: none; border-top: 1px solid rgba(255,255,255,0.1); }
 
   .glass-input {
-    width: 260px;
+    width: 100%;
     padding: 12px 18px;
     border-radius: 12px;
     border: 1px solid rgba(255,255,255,0.2);
@@ -90,14 +94,6 @@
     background: rgba(255,255,255,0.12);
   }
   .glass-input::placeholder { color: rgba(255,255,255,0.3); }
-
-  .join-actions {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 10px;
-    width: 100%;
-  }
 
   .btn-primary {
     width: 100%;
@@ -128,16 +124,47 @@
   }
   .btn-ghost:hover { background: rgba(255,255,255,0.1); color: #fff; }
 
+  /* ── Room code badge ── */
+  #room-code-badge {
+    position: fixed;
+    top: 16px; left: 50%;
+    transform: translateX(-50%);
+    background: rgba(255,255,255,0.07);
+    backdrop-filter: blur(12px);
+    border: 1px solid rgba(255,255,255,0.15);
+    border-radius: 50px;
+    padding: 6px 18px;
+    font-size: 0.8rem;
+    color: rgba(255,255,255,0.5);
+    z-index: 30;
+    display: none;
+    gap: 8px;
+    align-items: center;
+    cursor: pointer;
+    transition: background .2s;
+    white-space: nowrap;
+  }
+  #room-code-badge:hover { background: rgba(255,255,255,0.12); }
+  #room-code-badge span { color: #a78bfa; font-weight: 600; }
+
+  .creator-crown {
+    font-size: 0.75rem;
+    background: rgba(255,200,0,0.15);
+    border: 1px solid rgba(255,200,0,0.3);
+    border-radius: 50px;
+    padding: 2px 10px;
+    color: #ffd700;
+    font-weight: 600;
+  }
+
   /* ── Game screen ── */
   #game-screen {
-    display: none;
     position: relative;
     z-index: 10;
     width: 100%;
     height: 100dvh;
   }
 
-  /* ── Table area ── */
   #table-wrap {
     position: absolute;
     inset: 0;
@@ -146,10 +173,7 @@
     align-items: center;
     justify-content: center;
   }
-
-  #table-wrap.observer-mode {
-    bottom: 0;
-  }
+  #table-wrap.observer-mode { bottom: 0; }
 
   #table {
     background: rgba(255,255,255,0.06);
@@ -164,7 +188,6 @@
     flex-direction: column;
     gap: 10px;
     padding: 16px 24px;
-    /* min size — grows via JS */
     min-width: 260px;
     min-height: 110px;
     transition: width .4s ease, height .4s ease;
@@ -196,8 +219,8 @@
     transition: background .2s, transform .15s;
     letter-spacing: .04em;
   }
-  #reveal-btn:hover { background: rgba(255,255,255,0.18); transform: scale(1.04); }
-  #reveal-btn:disabled { opacity: 0.35; cursor: default; transform: none; }
+  #reveal-btn:hover:not(:disabled) { background: rgba(255,255,255,0.18); transform: scale(1.04); }
+  #reveal-btn:disabled { opacity: 0.35; cursor: default; }
 
   #reset-btn {
     padding: 8px 22px;
@@ -211,6 +234,13 @@
     transition: background .2s;
   }
   #reset-btn:hover { background: rgba(167,139,250,0.12); }
+
+  /* waiting label shown to non-creators */
+  #waiting-label {
+    font-size: 0.8rem;
+    color: rgba(255,255,255,0.3);
+    font-style: italic;
+  }
 
   /* ── Players ── */
   .player-slot {
@@ -234,10 +264,9 @@
     text-overflow: ellipsis;
     text-shadow: 0 1px 6px rgba(0,0,0,0.8);
   }
-  .player-name.is-me { color: #a78bfa; }
+  .player-name.is-me       { color: #a78bfa; }
   .player-name.is-observer { color: rgba(255,255,255,0.4); font-style: italic; }
 
-  /* ── Card ── */
   .card {
     width: 44px;
     height: 62px;
@@ -250,50 +279,18 @@
     position: relative;
     overflow: hidden;
   }
+  .card.not-voted    { background: rgba(255,255,255,0.05); border: 1px dashed rgba(255,255,255,0.18); }
+  .card.voted-hidden { background: rgba(124,58,237,0.25);  border: 1px solid rgba(124,58,237,0.5); backdrop-filter: blur(6px); }
+  .card.voted-hidden::after { content: '?'; position: absolute; font-size: 1.4rem; color: rgba(167,139,250,0.6); }
+  .card.voted-shown  { background: rgba(255,255,255,0.12); border: 1px solid rgba(255,255,255,0.3); backdrop-filter: blur(8px); color: #e8eaf0; box-shadow: 0 4px 16px rgba(0,0,0,0.3); }
+  .card.my-voted     { background: linear-gradient(135deg, rgba(124,58,237,0.6), rgba(37,99,235,0.6)); border: 1px solid rgba(167,139,250,0.7); backdrop-filter: blur(8px); color: #fff; box-shadow: 0 4px 20px rgba(124,58,237,0.4); }
 
-  .card.not-voted {
-    background: rgba(255,255,255,0.05);
-    border: 1px dashed rgba(255,255,255,0.18);
-  }
-
-  .card.voted-hidden {
-    background: rgba(124,58,237,0.25);
-    border: 1px solid rgba(124,58,237,0.5);
-    backdrop-filter: blur(6px);
-  }
-  .card.voted-hidden::after {
-    content: '?';
-    position: absolute;
-    font-size: 1.4rem;
-    color: rgba(167,139,250,0.6);
-  }
-
-  .card.voted-shown {
-    background: rgba(255,255,255,0.12);
-    border: 1px solid rgba(255,255,255,0.3);
-    backdrop-filter: blur(8px);
-    color: #e8eaf0;
-    box-shadow: 0 4px 16px rgba(0,0,0,0.3);
-  }
-
-  .card.my-voted {
-    background: linear-gradient(135deg, rgba(124,58,237,0.6), rgba(37,99,235,0.6));
-    border: 1px solid rgba(167,139,250,0.7);
-    backdrop-filter: blur(8px);
-    color: #fff;
-    box-shadow: 0 4px 20px rgba(124,58,237,0.4);
-  }
-
-  /* observer badge instead of card */
   .observer-badge {
-    width: 44px;
-    height: 44px;
+    width: 44px; height: 44px;
     border-radius: 50%;
     background: rgba(255,255,255,0.05);
     border: 1px dashed rgba(255,255,255,0.2);
-    display: flex;
-    align-items: center;
-    justify-content: center;
+    display: flex; align-items: center; justify-content: center;
     font-size: 1.2rem;
   }
 
@@ -312,111 +309,89 @@
     gap: 10px;
     z-index: 20;
   }
+  #vote-panel label { font-size: 0.72rem; color: rgba(255,255,255,0.4); font-weight: 600; letter-spacing: .1em; text-transform: uppercase; }
 
-  #vote-panel label {
-    font-size: 0.72rem;
-    color: rgba(255,255,255,0.4);
-    font-weight: 600;
-    letter-spacing: .1em;
-    text-transform: uppercase;
-  }
-
-  #cards-row {
-    display: flex;
-    gap: 7px;
-    flex-wrap: wrap;
-    justify-content: center;
-  }
+  #cards-row { display: flex; gap: 7px; flex-wrap: wrap; justify-content: center; }
 
   .vote-card {
-    width: 42px;
-    height: 58px;
+    width: 42px; height: 58px;
     border-radius: 10px;
     border: 1px solid rgba(255,255,255,0.15);
     background: rgba(255,255,255,0.07);
     color: rgba(255,255,255,0.8);
-    font-size: 1rem;
-    font-weight: 700;
+    font-size: 1rem; font-weight: 700;
     cursor: pointer;
-    display: flex;
-    align-items: center;
-    justify-content: center;
+    display: flex; align-items: center; justify-content: center;
     transition: background .15s, border-color .15s, transform .15s;
     user-select: none;
     backdrop-filter: blur(6px);
   }
-  .vote-card:hover {
-    background: rgba(124,58,237,0.3);
-    border-color: rgba(167,139,250,0.6);
-    transform: translateY(-5px);
-    color: #fff;
-  }
-  .vote-card.selected {
-    background: linear-gradient(135deg, rgba(124,58,237,0.7), rgba(37,99,235,0.7));
-    border-color: rgba(167,139,250,0.9);
-    color: #fff;
-    transform: translateY(-7px);
-    box-shadow: 0 6px 20px rgba(124,58,237,0.5);
-  }
+  .vote-card:hover    { background: rgba(124,58,237,0.3); border-color: rgba(167,139,250,0.6); transform: translateY(-5px); color: #fff; }
+  .vote-card.selected { background: linear-gradient(135deg, rgba(124,58,237,0.7), rgba(37,99,235,0.7)); border-color: rgba(167,139,250,0.9); color: #fff; transform: translateY(-7px); box-shadow: 0 6px 20px rgba(124,58,237,0.5); }
 
-  #custom-vote {
-    display: flex;
-    gap: 8px;
-    align-items: center;
-  }
+  #custom-vote { display: flex; gap: 8px; align-items: center; }
 
   #custom-input {
-    width: 72px;
-    padding: 7px 10px;
+    width: 72px; padding: 7px 10px;
     border-radius: 10px;
     border: 1px solid rgba(255,255,255,0.15);
     background: rgba(255,255,255,0.07);
-    color: #e8eaf0;
-    font-size: 0.95rem;
-    outline: none;
-    text-align: center;
+    color: #e8eaf0; font-size: 0.95rem;
+    outline: none; text-align: center;
     backdrop-filter: blur(6px);
   }
   #custom-input:focus { border-color: rgba(167,139,250,0.6); }
   #custom-input::placeholder { color: rgba(255,255,255,0.25); }
 
   #custom-submit {
-    padding: 7px 18px;
-    border-radius: 10px;
+    padding: 7px 18px; border-radius: 10px;
     border: 1px solid rgba(255,255,255,0.15);
     background: rgba(255,255,255,0.08);
-    color: rgba(255,255,255,0.8);
-    font-weight: 600;
-    cursor: pointer;
-    font-size: 0.88rem;
-    transition: background .2s;
-    backdrop-filter: blur(6px);
+    color: rgba(255,255,255,0.8); font-weight: 600;
+    cursor: pointer; font-size: 0.88rem;
+    transition: background .2s; backdrop-filter: blur(6px);
   }
   #custom-submit:hover { background: rgba(124,58,237,0.3); color: #fff; }
 </style>
 </head>
 <body>
 
-<!-- Join -->
-<div id="join-screen">
+<!-- Landing screen -->
+<div id="landing-screen" class="screen">
   <div class="glass-card">
     <h1>Planning Vote</h1>
-    <p>Inserisci il tuo nome per entrare alla sessione</p>
-    <input id="name-input" class="glass-input" type="text" placeholder="Il tuo nome…" maxlength="30" autocomplete="off">
-    <div class="join-actions">
-      <button id="join-btn" class="btn-primary">Entra e vota</button>
-      <button id="observer-btn" class="btn-ghost">👁 Solo osservatore</button>
-    </div>
+    <p>Crea un nuovo tavolo o entra in uno esistente</p>
+    <button id="create-btn" class="btn-primary">+ Crea nuovo tavolo</button>
+    <hr>
+    <p>Hai già un codice?</p>
+    <input id="room-input" class="glass-input" type="text" placeholder="Codice tavolo…" maxlength="32" autocomplete="off" spellcheck="false">
+    <button id="enter-room-btn" class="btn-ghost">Entra nel tavolo</button>
   </div>
 </div>
 
-<!-- Game -->
-<div id="game-screen">
+<!-- Join screen -->
+<div id="join-screen" class="screen">
+  <div class="glass-card">
+    <h1>Planning Vote</h1>
+    <p id="join-subtitle">Inserisci il tuo nome per entrare alla sessione</p>
+    <input id="name-input" class="glass-input" type="text" placeholder="Il tuo nome…" maxlength="30" autocomplete="off">
+    <button id="join-btn" class="btn-primary">Entra e vota</button>
+    <button id="observer-btn" class="btn-ghost">👁 Solo osservatore</button>
+  </div>
+</div>
+
+<!-- Game screen -->
+<div id="game-screen" style="display:none">
+  <div id="room-code-badge" title="Clicca per copiare il link">
+    🔗 Codice tavolo: <span id="room-code-label"></span>
+  </div>
+
   <div id="table-wrap">
     <div id="table">
       <div id="average-display"></div>
       <button id="reveal-btn">Rivela media</button>
-      <button id="reset-btn" style="display:none">Nuova stima</button>
+      <button id="reset-btn"  style="display:none">Nuova stima</button>
+      <div   id="waiting-label" style="display:none">In attesa del moderatore…</div>
     </div>
   </div>
 
@@ -432,32 +407,43 @@
 
 <script>
 const PRESET_VALUES = [1, 2, 3, 5, 8, 13, 21];
-const ORBIT_GAP = 34;   // px from table edge to player center
-const MIN_ORBIT_R = 175; // minimum orbit radius
-const MIN_ARC = 85;      // minimum arc-length between players
+const ORBIT_GAP     = 34;
+const MIN_ORBIT_R   = 175;
+const MIN_ARC       = 85;
 
-let myId = null;
+let myId       = null;
+let isCreator  = false;
 let isObserver = false;
-let state = { players: [], revealed: false, average: null };
-let myVote = null;
+let roomId     = null;
+let state      = { players: [], revealed: false, average: null, creatorId: null };
+let myVote     = null;
 let ws;
 
-const joinScreen   = document.getElementById('join-screen');
-const gameScreen   = document.getElementById('game-screen');
-const nameInput    = document.getElementById('name-input');
-const joinBtn      = document.getElementById('join-btn');
-const observerBtn  = document.getElementById('observer-btn');
-const tableWrap    = document.getElementById('table-wrap');
-const tableEl      = document.getElementById('table');
-const avgDisplay   = document.getElementById('average-display');
-const revealBtn    = document.getElementById('reveal-btn');
-const resetBtn     = document.getElementById('reset-btn');
-const votePanel    = document.getElementById('vote-panel');
-const cardsRow     = document.getElementById('cards-row');
-const customInput  = document.getElementById('custom-input');
-const customSubmit = document.getElementById('custom-submit');
+// ── DOM ──
+const landingScreen  = document.getElementById('landing-screen');
+const joinScreen     = document.getElementById('join-screen');
+const gameScreen     = document.getElementById('game-screen');
+const createBtn      = document.getElementById('create-btn');
+const roomInput      = document.getElementById('room-input');
+const enterRoomBtn   = document.getElementById('enter-room-btn');
+const joinSubtitle   = document.getElementById('join-subtitle');
+const nameInput      = document.getElementById('name-input');
+const joinBtn        = document.getElementById('join-btn');
+const observerBtn    = document.getElementById('observer-btn');
+const tableWrap      = document.getElementById('table-wrap');
+const tableEl        = document.getElementById('table');
+const avgDisplay     = document.getElementById('average-display');
+const revealBtn      = document.getElementById('reveal-btn');
+const resetBtn       = document.getElementById('reset-btn');
+const waitingLabel   = document.getElementById('waiting-label');
+const votePanel      = document.getElementById('vote-panel');
+const cardsRow       = document.getElementById('cards-row');
+const customInput    = document.getElementById('custom-input');
+const customSubmit   = document.getElementById('custom-submit');
+const roomCodeBadge  = document.getElementById('room-code-badge');
+const roomCodeLabel  = document.getElementById('room-code-label');
 
-// Build preset vote cards
+// ── Build vote cards ──
 PRESET_VALUES.forEach(v => {
   const card = document.createElement('div');
   card.className = 'vote-card';
@@ -469,10 +455,7 @@ PRESET_VALUES.forEach(v => {
 
 customSubmit.addEventListener('click', () => {
   const v = parseInt(customInput.value, 10);
-  if (!isNaN(v) && v >= 0 && v <= 999) {
-    sendVote(v, null);
-    customInput.value = '';
-  }
+  if (!isNaN(v) && v >= 0 && v <= 999) { sendVote(v, null); customInput.value = ''; }
 });
 customInput.addEventListener('keydown', e => { if (e.key === 'Enter') customSubmit.click(); });
 
@@ -490,28 +473,83 @@ function clearSelection() {
 }
 
 revealBtn.addEventListener('click', () => ws.send(JSON.stringify({ type: 'reveal' })));
-resetBtn.addEventListener('click', () => {
-  clearSelection();
-  ws.send(JSON.stringify({ type: 'reset' }));
-});
+resetBtn.addEventListener('click',  () => { clearSelection(); ws.send(JSON.stringify({ type: 'reset' })); });
 
-// ── Connect ──
+// ── Routing ──
+function randomCode() {
+  return Math.random().toString(36).slice(2, 8).toUpperCase();
+}
+
+function goToRoom(code) {
+  roomId = code.trim().toUpperCase();
+  history.pushState({}, '', '/' + roomId);
+  showJoinScreen();
+}
+
+function showJoinScreen() {
+  joinSubtitle.textContent = `Stai per entrare nel tavolo "${roomId}"`;
+  landingScreen.classList.remove('active');
+  joinScreen.classList.add('active');
+  nameInput.focus();
+}
+
+// Check URL on load
+const pathCode = location.pathname.replace('/', '').trim();
+if (pathCode) {
+  roomId = pathCode.toUpperCase();
+  showJoinScreen();
+} else {
+  landingScreen.classList.add('active');
+}
+
+createBtn.addEventListener('click', () => goToRoom(randomCode()));
+
+enterRoomBtn.addEventListener('click', () => {
+  const code = roomInput.value.trim();
+  if (code) goToRoom(code);
+});
+roomInput.addEventListener('keydown', e => { if (e.key === 'Enter') enterRoomBtn.click(); });
+
+// ── Join ──
+function doJoin(observer) {
+  const name = nameInput.value.trim();
+  if (!name) return;
+  isObserver = observer;
+  connect(name, observer);
+}
+
+joinBtn.addEventListener('click',    () => doJoin(false));
+observerBtn.addEventListener('click',() => doJoin(true));
+nameInput.addEventListener('keydown', e => { if (e.key === 'Enter') doJoin(false); });
+
 function connect(name, observer) {
   const proto = location.protocol === 'https:' ? 'wss' : 'ws';
   ws = new WebSocket(`${proto}://${location.host}`);
 
   ws.addEventListener('open', () => {
-    ws.send(JSON.stringify({ type: 'join', name, observer }));
+    ws.send(JSON.stringify({ type: 'join', name, observer, roomId }));
   });
 
   ws.addEventListener('message', e => {
     const msg = JSON.parse(e.data);
 
     if (msg.type === 'joined') {
-      myId = msg.id;
+      myId      = msg.id;
+      isCreator = msg.isCreator;
       isObserver = msg.observer;
-      joinScreen.style.display = 'none';
+
+      joinScreen.classList.remove('active');
       gameScreen.style.display = 'block';
+
+      roomCodeLabel.textContent = roomId;
+      roomCodeBadge.style.display = 'flex';
+      roomCodeBadge.addEventListener('click', () => {
+        navigator.clipboard.writeText(location.href).then(() => {
+          roomCodeBadge.title = 'Link copiato!';
+          setTimeout(() => { roomCodeBadge.title = 'Clicca per copiare il link'; }, 2000);
+        });
+      });
+
       if (isObserver) {
         votePanel.style.display = 'none';
         tableWrap.classList.add('observer-mode');
@@ -520,10 +558,9 @@ function connect(name, observer) {
 
     if (msg.type === 'state') {
       const me = msg.players.find(p => p.id === myId);
-      // Clear local selection if round was reset (our vote is gone)
-      if (me && !me.voted && !msg.revealed && myVote !== null) {
-        clearSelection();
-      }
+      if (me && !me.voted && !msg.revealed && myVote !== null) clearSelection();
+      // Update creator status (e.g. if original creator left)
+      isCreator = msg.creatorId === myId;
       state = msg;
       render();
     }
@@ -532,29 +569,35 @@ function connect(name, observer) {
   ws.addEventListener('close', () => setTimeout(() => connect(name, observer), 2000));
 }
 
-function doJoin(observer) {
-  const name = nameInput.value.trim();
-  if (!name) return;
-  connect(name, observer);
-}
-
-joinBtn.addEventListener('click', () => doJoin(false));
-observerBtn.addEventListener('click', () => doJoin(true));
-nameInput.addEventListener('keydown', e => { if (e.key === 'Enter') doJoin(false); });
-
 // ── Render ──
 function render() {
+  const hasVotes = state.players.some(p => !p.observer && p.voted);
+
   if (state.revealed && state.average !== null) {
     avgDisplay.textContent = state.average;
-    revealBtn.style.display = 'none';
-    resetBtn.style.display = 'inline-block';
+    if (isCreator) {
+      revealBtn.style.display  = 'none';
+      resetBtn.style.display   = 'inline-block';
+      waitingLabel.style.display = 'none';
+    } else {
+      revealBtn.style.display  = 'none';
+      resetBtn.style.display   = 'none';
+      waitingLabel.style.display = 'none';
+    }
   } else {
     avgDisplay.textContent = '';
-    revealBtn.style.display = 'inline-block';
-    const hasVotes = state.players.some(p => !p.observer && p.voted);
-    revealBtn.disabled = !hasVotes;
-    resetBtn.style.display = 'none';
+    if (isCreator) {
+      revealBtn.style.display    = 'inline-block';
+      revealBtn.disabled         = !hasVotes;
+      resetBtn.style.display     = 'none';
+      waitingLabel.style.display = 'none';
+    } else {
+      revealBtn.style.display    = 'none';
+      resetBtn.style.display     = 'none';
+      waitingLabel.style.display = hasVotes ? 'block' : 'none';
+    }
   }
+
   renderPlayers();
 }
 
@@ -565,58 +608,55 @@ function renderPlayers() {
   if (!players.length) return;
 
   const N = players.length;
-
-  // Orbit radius: ensure players have minimum arc spacing between them
-  const orbitR = Math.max(MIN_ORBIT_R, N * MIN_ARC / (2 * Math.PI));
-
-  // Table size: fills the space inside the orbit minus gap
+  const orbitR  = Math.max(MIN_ORBIT_R, N * MIN_ARC / (2 * Math.PI));
   const tableInner = (orbitR - ORBIT_GAP) * 2;
-  const tableW = Math.max(260, tableInner * 1.0);
-  const tableH = Math.max(110, tableInner * 0.48);
+  const tableW  = Math.max(260, tableInner);
+  const tableH  = Math.max(110, tableInner * 0.48);
+
   tableEl.style.width  = tableW + 'px';
   tableEl.style.height = tableH + 'px';
 
-  // Center of table in viewport
   const rect = tableEl.getBoundingClientRect();
   const cx = rect.left + rect.width  / 2;
   const cy = rect.top  + rect.height / 2;
 
   players.forEach((p, i) => {
-    const angle = (2 * Math.PI * i) / N - Math.PI / 2;
-    const x = cx + orbitR * Math.cos(angle);
-    const y = cy + orbitR * Math.sin(angle);
+    const angle    = (2 * Math.PI * i) / N - Math.PI / 2;
+    const x        = cx + orbitR * Math.cos(angle);
+    const y        = cy + orbitR * Math.sin(angle);
+    const isMe     = p.id === myId;
+    const isBottom = Math.sin(angle) > 0;
 
     const slot = document.createElement('div');
-    slot.className = 'player-slot';
+    slot.className  = 'player-slot';
     slot.style.left = x + 'px';
     slot.style.top  = y + 'px';
-
-    const isMe       = p.id === myId;
-    const isBottom   = Math.sin(angle) > 0;
 
     let visual;
     if (p.observer) {
       visual = document.createElement('div');
-      visual.className = 'observer-badge';
+      visual.className   = 'observer-badge';
       visual.textContent = '👁';
     } else {
       visual = document.createElement('div');
       if (!p.voted) {
         visual.className = 'card not-voted';
       } else if (state.revealed) {
-        visual.className = isMe ? 'card my-voted' : 'card voted-shown';
+        visual.className   = isMe ? 'card my-voted' : 'card voted-shown';
         visual.textContent = p.vote;
       } else {
-        visual.className = isMe ? 'card my-voted' : 'card voted-hidden';
+        visual.className   = isMe ? 'card my-voted' : 'card voted-hidden';
         if (isMe) visual.textContent = myVote !== null ? myVote : '';
       }
     }
 
     const name = document.createElement('div');
     name.className = 'player-name'
-      + (isMe ? ' is-me' : '')
+      + (isMe       ? ' is-me'       : '')
       + (p.observer ? ' is-observer' : '');
-    name.textContent = p.name + (isMe ? ' (tu)' : '');
+
+    const isThisCreator = p.id === state.creatorId;
+    name.textContent = (isThisCreator ? '👑 ' : '') + p.name + (isMe ? ' (tu)' : '');
 
     if (isBottom) { slot.appendChild(visual); slot.appendChild(name); }
     else          { slot.appendChild(name);   slot.appendChild(visual); }
