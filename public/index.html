@@ -359,6 +359,15 @@
 </head>
 <body>
 
+<!-- Error screen -->
+<div id="error-screen" class="screen">
+  <div class="glass-card">
+    <h1>Planning Vote</h1>
+    <p id="error-message">Questa pagina non esiste.</p>
+    <button class="btn-primary" onclick="location.href='/'">Torna alla home</button>
+  </div>
+</div>
+
 <!-- Landing screen -->
 <div id="landing-screen" class="screen">
   <div class="glass-card">
@@ -505,12 +514,18 @@ function showJoinScreen() {
 }
 
 // Check URL on load
-const pathCode = location.pathname.replace('/', '').trim();
-if (pathCode) {
-  roomId = pathCode.toUpperCase();
+const errorScreen = document.getElementById('error-screen');
+const errorMessage = document.getElementById('error-message');
+const pathParts = location.pathname.split('/').filter(Boolean);
+
+if (pathParts.length === 0) {
+  landingScreen.classList.add('active');
+} else if (pathParts.length === 1 && /^[A-Z0-9]{1,32}$/i.test(pathParts[0])) {
+  roomId = pathParts[0].toUpperCase();
   showJoinScreen();
 } else {
-  landingScreen.classList.add('active');
+  errorMessage.textContent = `Il tavolo "${location.pathname}" non esiste.`;
+  errorScreen.classList.add('active');
 }
 
 createBtn.addEventListener('click', () => goToRoom(randomCode()));
