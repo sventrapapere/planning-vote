@@ -9,11 +9,10 @@ const wss = new WebSocket.Server({ server });
 
 app.use(express.static(path.join(__dirname, 'public')));
 
-// Game state
-let players = {}; // id -> { id, name, vote, ws }
+let players = {}; // id -> { id, name, vote, observer, ws }
 let revealed = false;
 
-const VOTABLE = [1, 2, 3, 5, 8, 13, 21, 34, 55, 89];
+const VOTABLE = [1, 2, 3, 5, 8, 13, 21];
 
 function nearestVotable(avg) {
   return VOTABLE.reduce((best, v) =>
@@ -24,9 +23,7 @@ function nearestVotable(avg) {
 function broadcast(data) {
   const msg = JSON.stringify(data);
   wss.clients.forEach(client => {
-    if (client.readyState === WebSocket.OPEN) {
-      client.send(msg);
-    }
+    if (client.readyState === WebSocket.OPEN) client.send(msg);
   });
 }
 
@@ -34,13 +31,16 @@ function getPublicState() {
   const playerList = Object.values(players).map(p => ({
     id: p.id,
     name: p.name,
+    observer: p.observer,
     voted: p.vote !== null,
     vote: revealed ? p.vote : null,
   }));
 
   let average = null;
   if (revealed) {
-    const votes = playerList.filter(p => p.vote !== null).map(p => p.vote);
+    const votes = Object.values(players)
+      .filter(p => !p.observer && p.vote !== null)
+      .map(p => p.vote);
     if (votes.length > 0) {
       const avg = votes.reduce((a, b) => a + b, 0) / votes.length;
       average = nearestVotable(avg);
@@ -59,12 +59,13 @@ wss.on('connection', (ws) => {
 
     if (msg.type === 'join') {
       const name = String(msg.name || 'Anonimo').slice(0, 30);
-      players[id] = { id, name, vote: null, ws };
-      ws.send(JSON.stringify({ type: 'joined', id }));
+      const observer = !!msg.observer;
+      players[id] = { id, name, vote: null, observer, ws };
+      ws.send(JSON.stringify({ type: 'joined', id, observer }));
       broadcast(getPublicState());
     }
 
-    if (msg.type === 'vote' && players[id]) {
+    if (msg.type === 'vote' && players[id] && !players[id].observer) {
       const v = Number(msg.value);
       if (!isNaN(v) && v >= 0 && v <= 999) {
         players[id].vote = v;
